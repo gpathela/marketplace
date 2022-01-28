@@ -26,10 +26,10 @@ describe("marketplace", () => {
   );
   console.log("nftToSell", nftToSell.toBase58());
 
-  const priceArray = [
-    { token: usdcDummy, price: 150_000_000 },
-    { token: usTDummy, price: 145*10**9 },
-  ];
+  const usdcPrice = { token: usdcDummy, price: new anchor.BN(150) };
+  const usdtPrice = { token: usTDummy, price: new anchor.BN(150) };
+  const priceArray = [usdcPrice, usdtPrice];
+
   //
   const keys = [
     usdcDummy,
@@ -107,32 +107,26 @@ describe("marketplace", () => {
   ////
 
   it("Create Sell Proposal", async () => {
-    // The NFT that will be sold
-    //  const nftToSell = await createMint(0);
-    console.log("nftToSell in create sell proposal :", nftToSell.toBase58());
-    // Sell Proposal account
+    console.log("nftToSell", nftToSell.toBase58());
     const saleProposal = anchor.web3.Keypair.generate();
     console.log(
       "saleProposal in create sell proposal",
       saleProposal.publicKey.toBase58()
     );
-
-    await program.rpc.createProposal(nftToSell,priceArray,{
+    await program.rpc.createProposal(nftToSell, priceArray, {
       accounts: {
         saleProposal: saleProposal.publicKey,
         approvedTokens: approvedTokens.publicKey,
         user: provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
-      }
+      },
+      signers: [provider.wallet.Keypair],
     });
-
-    //  const saleProposalList = await program.account.saleProposal.fetch(
-    //   saleProposal.publicKey
-    // );
-    // console.log(JSON.stringify(saleProposalList));
+    console.log(
+      "saleProposal in create sell proposal",
+      saleProposal.publicKey.toBase58()
+    );
   });
-
-  // util fn
 });
 
 // mint : E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE

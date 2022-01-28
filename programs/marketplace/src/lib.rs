@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use std::convert::Into;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -183,7 +184,6 @@ impl ProposalStatus {
     }
 }
 
-
-/* update 
+/* update
 automate the price calculation
 use PDA*/
