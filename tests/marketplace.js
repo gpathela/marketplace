@@ -117,15 +117,13 @@ describe("marketplace", () => {
       saleProposal.publicKey.toBase58()
     );
 
-    await program.rpc.createProposal({
+    await program.rpc.createProposal(nftToSell,priceArray,{
       accounts: {
-        saleProposal: saleProposal.publicKey.toBase58(),
-        approvedTokens: approvedTokens.publicKey.toBase58(),
-        user: provider.wallet.publicKey.toBase58(),
+        saleProposal: saleProposal.publicKey,
+        approvedTokens: approvedTokens.publicKey,
+        user: provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
-      },
-      token: nftToSell.toBase58(),
-      prices: priceArray,
+      }
     });
 
     //  const saleProposalList = await program.account.saleProposal.fetch(
