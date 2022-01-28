@@ -1,27 +1,52 @@
 const assert = require("assert");
 const anchor = require("@project-serum/anchor");
-const { publicKey } = require("@project-serum/anchor/dist/cjs/utils");
 const { SystemProgram, PublicKey } = anchor.web3;
-const keys = [
-  new PublicKey("H2N38iZpTXiGj86DCxuXwgQaaVVa3G64HR3RNfjyu49r"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  new PublicKey("1nc1nerator11111111111111111111111111111111"),
-];
+const web3 = require("@solana/web3.js");
+
+const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
+const TokenInstructions = require("@project-serum/serum").TokenInstructions;
+// const TOKEN_PROGRAM_ID = new anchor.web3.PublicKey(
+//   TokenInstructions.TOKEN_PROGRAM_ID.toString()
+// );
 
 describe("marketplace", () => {
   const provider = anchor.Provider.local();
 
+  // cost USDC dev
+  const usdcDummy = new PublicKey(
+    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+  );
+  const usTDummy = new PublicKey(
+    "FWMTkCUmxa4xstJ6uP6wHHdtrC7sfCMoQNSg3z7rnbR5"
+  );
+
+  // const nftToSell= anchor.web3.Keypair.generate() DoQknEZ58VZUdPszCS8sqDszmmr9EPRyBpKgTpim3MNt
+  const nftToSell = new PublicKey(
+    "E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE"
+  );
+  console.log("nftToSell", nftToSell.toBase58());
+
+  const priceArray = [
+    { token: usdcDummy, price: 150_000_000 },
+    { token: usTDummy, price: 145*10**9 },
+  ];
+  //
+  const keys = [
+    usdcDummy,
+    usTDummy,
+    new PublicKey("1nc1nerator11111111111111111111111111111111"),
+    new PublicKey("1nc1nerator11111111111111111111111111111111"),
+    new PublicKey("1nc1nerator11111111111111111111111111111111"),
+    new PublicKey("1nc1nerator11111111111111111111111111111111"),
+    new PublicKey("1nc1nerator11111111111111111111111111111111"),
+    new PublicKey("1nc1nerator11111111111111111111111111111111"),
+    new PublicKey("1nc1nerator11111111111111111111111111111111"),
+    new PublicKey("1nc1nerator11111111111111111111111111111111"),
+  ];
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
 
-  // Counter for the tests.
+  // Aproved token list account.
   const approvedTokens = anchor.web3.Keypair.generate();
 
   // Program for the tests.
@@ -45,7 +70,7 @@ describe("marketplace", () => {
       "1nc1nerator11111111111111111111111111111111"
     );
     approvedTokensAccount.tokens.forEach((token) => {
-      console.log(token.toBase58());
+      console.log("token in initialize", token.toBase58());
       assert.equal(token.toBase58(), requiredPubKey.toBase58());
     });
     assert.ok(
@@ -78,4 +103,41 @@ describe("marketplace", () => {
       approvedTokensAccount.authority.equals(provider.wallet.publicKey)
     );
   });
+
+  ////
+
+  it("Create Sell Proposal", async () => {
+    // The NFT that will be sold
+    //  const nftToSell = await createMint(0);
+    console.log("nftToSell in create sell proposal :", nftToSell.toBase58());
+    // Sell Proposal account
+    const saleProposal = anchor.web3.Keypair.generate();
+    console.log(
+      "saleProposal in create sell proposal",
+      saleProposal.publicKey.toBase58()
+    );
+
+    await program.rpc.createProposal({
+      accounts: {
+        saleProposal: saleProposal.publicKey.toBase58(),
+        approvedTokens: approvedTokens.publicKey.toBase58(),
+        user: provider.wallet.publicKey.toBase58(),
+        systemProgram: SystemProgram.programId,
+      },
+      token: nftToSell.toBase58(),
+      prices: priceArray,
+    });
+
+    //  const saleProposalList = await program.account.saleProposal.fetch(
+    //   saleProposal.publicKey
+    // );
+    // console.log(JSON.stringify(saleProposalList));
+  });
+
+  // util fn
 });
+
+// mint : E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE
+// address : bkC8E8R4aEguteKzxGwh55Gz4VJdKUgC3SgU3QFgPC6
+// nft : DoQknEZ58VZUdPszCS8sqDszmmr9EPRyBpKgTpim3MNt
+// owner address : G3KGuXDfBHB3PFbC5c56ZWRbiQGMNuqPXzs2kDkZn177
