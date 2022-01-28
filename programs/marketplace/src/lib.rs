@@ -35,15 +35,15 @@ pub mod marketplace {
         proposal.proposal_id = 0;
         proposal.proposal_status = ProposalStatus::Pending.to_u8();
         let approved_tokens = &mut ctx.accounts.approved_tokens;
-        let prices_array: [PriceStruct; 10] = [PriceStruct {
+        let mut prices_array: [PriceStruct; 10] = [PriceStruct {
             price: 0,
             token: "1nc1nerator11111111111111111111111111111111"
                 .parse()
                 .unwrap(),
         }; 10];
         //Counter of values
-        let j = 0;
-        prices.iter().enumerate().for_each(|(i, price)| {
+        let mut j = 0;
+        prices.iter().enumerate().for_each(|(_i, price)| {
             //If price is greater than 0
             if price.price > 0 {
                 //if token is approved
@@ -112,7 +112,7 @@ impl SaleProposal {
     pub const LEN: usize = (PriceStruct::LEN * 10) + (32 * 2) + 8 + 1;
 }
 
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
 pub struct PriceStruct {
     pub price: u64,
     pub token: Pubkey,
