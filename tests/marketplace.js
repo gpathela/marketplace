@@ -13,36 +13,15 @@ describe("marketplace", () => {
   const provider = anchor.Provider.local();
 
   // cost USDC dev
-  const usdcDummy = new PublicKey(
-    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-  );
-  const usTDummy = new PublicKey(
-    "FWMTkCUmxa4xstJ6uP6wHHdtrC7sfCMoQNSg3z7rnbR5"
-  );
+  let usdcDummy;
+  let usTDummy;
 
-  // const nftToSell= anchor.web3.Keypair.generate() DoQknEZ58VZUdPszCS8sqDszmmr9EPRyBpKgTpim3MNt
-  const nftToSell = new PublicKey(
-    "E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE"
-  );
-  console.log("nftToSell", nftToSell.toBase58());
+  let nftToSell;
 
-  const usdcPrice = { token: usdcDummy, price: new anchor.BN(150) };
-  const usdtPrice = { token: usTDummy, price: new anchor.BN(150) };
-  const priceArray = [usdcPrice, usdtPrice];
+  let priceArray;
 
   //
-  const keys = [
-    usdcDummy,
-    usTDummy,
-    new PublicKey("1nc1nerator11111111111111111111111111111111"),
-    new PublicKey("1nc1nerator11111111111111111111111111111111"),
-    new PublicKey("1nc1nerator11111111111111111111111111111111"),
-    new PublicKey("1nc1nerator11111111111111111111111111111111"),
-    new PublicKey("1nc1nerator11111111111111111111111111111111"),
-    new PublicKey("1nc1nerator11111111111111111111111111111111"),
-    new PublicKey("1nc1nerator11111111111111111111111111111111"),
-    new PublicKey("1nc1nerator11111111111111111111111111111111"),
-  ];
+  let keys;
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
 
@@ -51,6 +30,25 @@ describe("marketplace", () => {
 
   // Program for the tests.
   const program = anchor.workspace.Marketplace;
+
+  it("Setup", async () => {
+    const usdcPrice = { token: usdcDummy, price: new anchor.BN(150) };
+    const usdtPrice = { token: usTDummy, price: new anchor.BN(150) };
+    priceArray = [usdcPrice, usdtPrice];
+
+    keys = [
+      usdcDummy,
+      usTDummy,
+      new PublicKey("1nc1nerator11111111111111111111111111111111"),
+      new PublicKey("1nc1nerator11111111111111111111111111111111"),
+      new PublicKey("1nc1nerator11111111111111111111111111111111"),
+      new PublicKey("1nc1nerator11111111111111111111111111111111"),
+      new PublicKey("1nc1nerator11111111111111111111111111111111"),
+      new PublicKey("1nc1nerator11111111111111111111111111111111"),
+      new PublicKey("1nc1nerator11111111111111111111111111111111"),
+      new PublicKey("1nc1nerator11111111111111111111111111111111"),
+    ];
+  });
 
   it("Initalize an approved token account", async () => {
     await program.rpc.initialize(provider.wallet.publicKey, {
