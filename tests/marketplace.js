@@ -13,6 +13,7 @@ describe("marketplace", () => {
   const provider = anchor.Provider.local();
 
   // cost USDC dev
+
   let usdcDummy;
   let usTDummy;
 
@@ -31,7 +32,13 @@ describe("marketplace", () => {
   // Program for the tests.
   const program = anchor.workspace.Marketplace;
 
-  it("Setup", async () => {
+  it("Initalize an approved token account", async () => {
+    usdcDummy = await createMint(6);
+    console.log("usdcDummy", usdcDummy);
+    usTDummy = await createMint(6);
+    console.log("usTDummy", usTDummy);
+    nftToSell = await createMint(0);
+    console.log("nftToSell", nftToSell);
     const usdcPrice = { token: usdcDummy, price: new anchor.BN(150) };
     const usdtPrice = { token: usTDummy, price: new anchor.BN(150) };
     priceArray = [usdcPrice, usdtPrice];
@@ -48,9 +55,6 @@ describe("marketplace", () => {
       new PublicKey("1nc1nerator11111111111111111111111111111111"),
       new PublicKey("1nc1nerator11111111111111111111111111111111"),
     ];
-  });
-
-  it("Initalize an approved token account", async () => {
     await program.rpc.initialize(provider.wallet.publicKey, {
       accounts: {
         approvedTokens: approvedTokens.publicKey,
@@ -125,6 +129,35 @@ describe("marketplace", () => {
       saleProposal.publicKey.toBase58()
     );
   });
+
+  ///
+  async function createMint(decimals) {
+    const mint = anchor.web3.Keypair.generate();
+    console.log("mint", mint);
+    let instructions = [
+      anchor.web3.SystemProgram.createAccount({
+        fromPubkey: provider.wallet.publicKey,
+        newAccountPubkey: mint.publicKey,
+        space: 82,
+        lamports: await provider.connection.getMinimumBalanceForRentExemption(
+          82
+        ),
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      TokenInstructions.initializeMint({
+        mint: mint.publicKey,
+        decimals: decimals,
+        mintAuthority: provider.wallet.publicKey,
+      }),
+    ];
+    console.log("Instructions created");
+    const tx = new anchor.web3.Transaction();
+    tx.add(...instructions);
+    console.log("Instructions added");
+    await provider.send(tx, [mint]);
+    console.log("Instructions sent");
+    return mint.publicKey;
+  }
 });
 
 // mint : E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE
