@@ -8,8 +8,13 @@ pub mod marketplace {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, authority: Pubkey) -> ProgramResult {
+        // retreive the initialized account approved_token
         let approved_tokens = &mut ctx.accounts.approved_tokens;
+
+        // initialize the owner of the list
         approved_tokens.authority = authority;
+
+        // Fills the array with dummy PublicKeys
         approved_tokens.tokens = ["1nc1nerator11111111111111111111111111111111"
             .parse()
             .unwrap(); 10];
@@ -20,6 +25,7 @@ pub mod marketplace {
         ctx: Context<UpdateApprovedTokens>,
         new_approved_tokens: [Pubkey; 10],
     ) -> ProgramResult {
+        // retreive the account approved_token, check is already done regardng owner
         let approved_tokens = &mut ctx.accounts.approved_tokens;
         approved_tokens.tokens = new_approved_tokens;
         Ok(())
@@ -30,24 +36,42 @@ pub mod marketplace {
         token: Pubkey,
         prices: Vec<PriceStruct>,
     ) -> ProgramResult {
+
+        // retreive the initialized proposal
         let proposal = &mut ctx.accounts.sale_proposal.load_init()?;
+
+        // give them unique and according values
+        // PubKey of the desired NFT to sell
         proposal.token = token;
+
+        // Copy the owner of this nft to seller
         proposal.seller = ctx.accounts.user.key.clone();
+
+        // TO DO for creating PDA
         proposal.proposal_id = 0;
+
+        // Puting the status pending
         proposal.proposal_status = ProposalStatus::Pending.to_u8();
+
+        // retreive the full list of accepted payment
         let approved_tokens = &mut ctx.accounts.approved_tokens;
+
+        // creates and initialize a specific price array for this sale
         let mut prices_array: [PriceStruct; 10] = [PriceStruct {
             price: 0,
             token: "1nc1nerator11111111111111111111111111111111"
                 .parse()
                 .unwrap(),
         }; 10];
-        //Counter of values
+
+        //iterates and changes the price array according to seller desire to exchange his NFT for those tokens (enter manually)
         let mut j = 0;
         prices.iter().enumerate().for_each(|(_i, price)| {
-            //If price is greater than 0
+
+            //Check price positive
             if price.price > 0 {
-                //if token is approved
+
+                //if token is in the approved list then add to the custom list
                 if approved_tokens.tokens.contains(&price.token)
                     && price.token
                         != "1nc1nerator11111111111111111111111111111111"
@@ -61,40 +85,15 @@ pub mod marketplace {
         });
         Ok(())
     }
-    // pub fn cancel_proposal(
-    //     ctx: Context<CreateProposal>,
-    //     token: Pubkey,
-    //     prices: Vec<PriceStruct>,
-    // ) -> ProgramResult {
-    //     let proposal = &mut ctx.accounts.sale_proposal.load_init()?;
-    //     proposal.token = token;
-    //     proposal.seller = ctx.accounts.user.key.clone();
-    //     proposal.proposal_id = 0;
-    //     proposal.proposal_status = ProposalStatus::Pending.to_u8();
-    //     let approved_tokens = &mut ctx.accounts.approved_tokens;
-    //     let mut prices_array: [PriceStruct; 10] = [PriceStruct {
-    //         price: 0,
-    //         token: "1nc1nerator11111111111111111111111111111111"
-    //             .parse()
-    //             .unwrap(),
-    //     }; 10];
-    //     //Counter of values
-    //     let mut j = 0;
-    //     prices.iter().enumerate().for_each(|(_i, price)| {
-    //         //If price is greater than 0
-    //         if price.price > 0 {
-    //             //if token is approved
-    //             if approved_tokens.tokens.contains(&price.token)
-    //                 && price.token
-    //                     != "1nc1nerator11111111111111111111111111111111"
-    //                         .parse()
-    //                         .unwrap()
-    //             {
-    //                 prices_array[j] = price.clone();
-    //                 j += 1;
-    //             }
-    //         }
-    //     });
+
+    // pub fn cancel_proposal(ctx: Context<CancelProposal>, token: Pubkey) -> ProgramResult {
+    //     let proposal = &mut ctx.accounts.sale_proposal;
+
+            // If the seller is the owner of the keypair, change the status to cancelled
+    //     if (proposal.seller == &ctx.accounts.user && proposal.token.contains(token)) {
+    //         proposal.proposal_status = ProposalStatus::Cancelled.to_u8()
+    //     }
+
     //     Ok(())
     // }
 }
@@ -120,6 +119,15 @@ pub struct CreateProposal<'info> {
     #[account(init, payer = user, space = 200)]
     pub sale_proposal: Loader<'info, SaleProposal>,
     pub approved_tokens: Account<'info, ApprovedTokens>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct CancelProposal<'info> {
+    #[account(mut)]
+    pub sale_proposal: Loader<'info, SaleProposal>,
     #[account(mut)]
     pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -184,6 +192,11 @@ impl ProposalStatus {
     }
 }
 
-/* update
+/* to do
+debug creation proposal
+test cancel proposal
+test proceed to buy
+
+update the code:
 automate the price calculation
 use PDA*/

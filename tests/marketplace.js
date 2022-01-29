@@ -81,6 +81,10 @@ describe("marketplace", () => {
   });
 
   it("Update the token account", async () => {
+    console.log(
+      "provider.wallet.Keypair in update token account before :",
+      provider.wallet.Keypair
+    );
     await program.rpc.updateApprovedTokens(keys, {
       accounts: {
         approvedTokens: approvedTokens.publicKey,
@@ -88,6 +92,10 @@ describe("marketplace", () => {
       },
       signers: [provider.wallet.Keypair],
     });
+    console.log(
+      "provider.wallet.Keypair in update token account after:",
+      provider.wallet.Keypair
+    );
 
     let approvedTokensAccount = await program.account.approvedTokens.fetch(
       approvedTokens.publicKey
@@ -112,9 +120,18 @@ describe("marketplace", () => {
     console.log("nftToSell", nftToSell.toBase58());
     const saleProposal = anchor.web3.Keypair.generate();
     console.log(
-      "saleProposal in create sell proposal",
+      "saleProposal in create sell proposal :",
       saleProposal.publicKey.toBase58()
     );
+    console.log(
+      "approvedTokens in create sell proposal :",
+      approvedTokens.publicKey.toBase58()
+    );
+    console.log(
+      "provider.wallet.publicKey in create sell proposal :",
+      provider.wallet.publicKey.toBase58()
+    );
+
     await program.rpc.createProposal(nftToSell, priceArray, {
       accounts: {
         saleProposal: saleProposal.publicKey,
@@ -130,7 +147,7 @@ describe("marketplace", () => {
     );
   });
 
-  ///
+  /// for testing purpose CreateMint creates token (decimals) or NFT (no decimals)
   async function createMint(decimals) {
     const mint = anchor.web3.Keypair.generate();
     console.log("mint", mint);
