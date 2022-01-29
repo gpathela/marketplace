@@ -13,17 +13,14 @@ describe("marketplace", () => {
   const provider = anchor.Provider.local();
 
   // cost USDC dev
-  const usdcDummy = new PublicKey(
-    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-  );
-  const usTDummy = new PublicKey(
-    "FWMTkCUmxa4xstJ6uP6wHHdtrC7sfCMoQNSg3z7rnbR5"
-  );
+  const usdcDummy = await createMint(6)
+  const usTDummy = await createMint(9)
 
   // const nftToSell= anchor.web3.Keypair.generate() DoQknEZ58VZUdPszCS8sqDszmmr9EPRyBpKgTpim3MNt
-  const nftToSell = new PublicKey(
-    "E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE"
-  );
+  // const nftToSell = new PublicKey(
+  //   "E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE"
+  // );
+  const nftToSell= await createMint(0);
   console.log("nftToSell", nftToSell.toBase58());
 
   const usdcPrice = { token: usdcDummy, price: new anchor.BN(150) };
@@ -107,6 +104,7 @@ describe("marketplace", () => {
   ////
 
   it("Create Sell Proposal", async () => {
+
     console.log("nftToSell", nftToSell.toBase58());
     const saleProposal = anchor.web3.Keypair.generate();
     console.log(
@@ -127,6 +125,35 @@ describe("marketplace", () => {
       saleProposal.publicKey.toBase58()
     );
   });
+
+
+///
+async function createMint(decimals) {
+  const mint = anchor.web3.Keypair.generate();
+
+  let instructions = [
+    anchor.web3.SystemProgram.createAccount({
+      fromPubkey: provider.wallet.publicKey,
+      newAccountPubkey: mint,
+      space: 82,
+      lamports: await provider.connection.getMinimumBalanceForRentExemption(82),
+      programId: TOKEN_PROGRAM_ID,
+    }),
+    TokenInstructions.initializeMint({
+      mint,
+      decimals: decimals,
+      mintAuthority: provider.wallet.publicKey,
+    }),
+  ];
+
+  const tx = new anchor.web3.Transaction();
+  tx.add(...instructions);
+
+  await provider.send(tx, [provider.wallet.publicKey]);
+
+  return mint.publicKey;
+}
+
 });
 
 // mint : E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE
