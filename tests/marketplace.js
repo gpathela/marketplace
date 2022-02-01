@@ -20,9 +20,18 @@ describe("marketplace", () => {
   let nftToSell;
 
   let priceArray;
-
-  //
   let keys;
+
+  const saleProposal = anchor.web3.Keypair.generate();
+  const ppayer = web3.Keypair.fromSecretKey(
+    Buffer.from(
+      JSON.parse(
+        require("fs").readFileSync(process.env.ANCHOR_WALLET, {
+          encoding: "utf-8",
+        })
+      )
+    ))
+  //
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
 
@@ -34,14 +43,14 @@ describe("marketplace", () => {
 
   it("Initalize an approved token account", async () => {
     usdcDummy = await createMint(6);
-    console.log("usdcDummy", usdcDummy);
+    console.log("usdcDummy", usdcDummy.toBase58());
     usTDummy = await createMint(6);
-    console.log("usTDummy", usTDummy);
+    console.log("usTDummy", usTDummy.toBase58());
     nftToSell = await createMint(0);
-    console.log("nftToSell", nftToSell);
+    console.log("nftToSell", nftToSell.toBase58());
     const usdcPrice = { token: usdcDummy, price: new anchor.BN(150) };
-    const usdtPrice = { token: usTDummy, price: new anchor.BN(150) };
-    priceArray = [usdcPrice, usdtPrice];
+    const ustPrice = { token: usTDummy, price: new anchor.BN(150) };
+    priceArray = [usdcPrice, ustPrice];
 
     keys = [
       usdcDummy,
@@ -72,7 +81,6 @@ describe("marketplace", () => {
       "1nc1nerator11111111111111111111111111111111"
     );
     approvedTokensAccount.tokens.forEach((token) => {
-      console.log("token in initialize", token.toBase58());
       assert.equal(token.toBase58(), requiredPubKey.toBase58());
     });
     assert.ok(
@@ -81,10 +89,7 @@ describe("marketplace", () => {
   });
 
   it("Update the token account", async () => {
-    console.log(
-      "provider.wallet.Keypair in update token account before :",
-      provider.wallet.Keypair
-    );
+   
     await program.rpc.updateApprovedTokens(keys, {
       accounts: {
         approvedTokens: approvedTokens.publicKey,
@@ -92,11 +97,7 @@ describe("marketplace", () => {
       },
       signers: [provider.wallet.Keypair],
     });
-    console.log(
-      "provider.wallet.Keypair in update token account after:",
-      provider.wallet.Keypair
-    );
-
+  
     let approvedTokensAccount = await program.account.approvedTokens.fetch(
       approvedTokens.publicKey
     );
@@ -117,21 +118,17 @@ describe("marketplace", () => {
   ////
 
   it("Create Sell Proposal", async () => {
-    console.log("nftToSell", nftToSell.toBase58());
-    const saleProposal = anchor.web3.Keypair.generate();
+
+    // console.log("nftToSell : ", nftToSell.toBase58());
+  
     console.log(
-      "saleProposal in create sell proposal :",
+      "Sale Proposal Account : ",
       saleProposal.publicKey.toBase58()
     );
     console.log(
-      "approvedTokens in create sell proposal :",
+      "Approved Tokens Account : ",
       approvedTokens.publicKey.toBase58()
     );
-    console.log(
-      "provider.wallet.publicKey in create sell proposal :",
-      provider.wallet.publicKey.toBase58()
-    );
-
     await program.rpc.createProposal(nftToSell, priceArray, {
       accounts: {
         saleProposal: saleProposal.publicKey,
@@ -139,18 +136,32 @@ describe("marketplace", () => {
         user: provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
       },
-      signers: [provider.wallet.Keypair],
+      signers: [saleProposal,ppayer],
     });
+  });
+
+
+  it("Cancel sale proposal", async () => {
+    
+    await program.rpc.cancelProposal(nftToSell, {
+      accounts: {
+        saleProposal: saleProposal.publicKey,
+        user: provider.wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      },
+      signers: [ppayer],
+    });
+
     console.log(
-      "saleProposal in create sell proposal",
+      "sale Proposal cancelled :",
       saleProposal.publicKey.toBase58()
     );
+
   });
 
   /// for testing purpose CreateMint creates token (decimals) or NFT (no decimals)
   async function createMint(decimals) {
     const mint = anchor.web3.Keypair.generate();
-    console.log("mint", mint);
     let instructions = [
       anchor.web3.SystemProgram.createAccount({
         fromPubkey: provider.wallet.publicKey,
@@ -167,16 +178,14 @@ describe("marketplace", () => {
         mintAuthority: provider.wallet.publicKey,
       }),
     ];
-    console.log("Instructions created");
     const tx = new anchor.web3.Transaction();
     tx.add(...instructions);
-    console.log("Instructions added");
     await provider.send(tx, [mint]);
-    console.log("Instructions sent");
     return mint.publicKey;
   }
 });
 
+//Testnet Address - Later
 // mint : E4NpcJTWq1fc8X9LUGJqrrFq6a3BkXri8W6bVdeH7ygE
 // address : bkC8E8R4aEguteKzxGwh55Gz4VJdKUgC3SgU3QFgPC6
 // nft : DoQknEZ58VZUdPszCS8sqDszmmr9EPRyBpKgTpim3MNt

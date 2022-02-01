@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use std::convert::Into;
+use std::{convert::Into, fmt::Debug};
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -36,8 +36,8 @@ pub mod marketplace {
         token: Pubkey,
         prices: Vec<PriceStruct>,
     ) -> ProgramResult {
-
         // retreive the initialized proposal
+        // msg!("test");
         let proposal = &mut ctx.accounts.sale_proposal.load_init()?;
 
         // give them unique and according values
@@ -64,13 +64,13 @@ pub mod marketplace {
                 .unwrap(),
         }; 10];
 
+        msg!("price_array {:?}", prices_array);
+
         //iterates and changes the price array according to seller desire to exchange his NFT for those tokens (enter manually)
         let mut j = 0;
         prices.iter().enumerate().for_each(|(_i, price)| {
-
             //Check price positive
             if price.price > 0 {
-
                 //if token is in the approved list then add to the custom list
                 if approved_tokens.tokens.contains(&price.token)
                     && price.token
@@ -86,16 +86,19 @@ pub mod marketplace {
         Ok(())
     }
 
-    // pub fn cancel_proposal(ctx: Context<CancelProposal>, token: Pubkey) -> ProgramResult {
-    //     let proposal = &mut ctx.accounts.sale_proposal;
+    pub fn cancel_proposal(ctx: Context<CancelProposal>, token: Pubkey) -> ProgramResult {
+        let sale_proposal = &mut ctx.accounts.sale_proposal.load_mut()?;
+        let user =&ctx.accounts.user;
 
-            // If the seller is the owner of the keypair, change the status to cancelled
-    //     if (proposal.seller == &ctx.accounts.user && proposal.token.contains(token)) {
-    //         proposal.proposal_status = ProposalStatus::Cancelled.to_u8()
-    //     }
+        // If the seller is the owner of the keypair, change the status to cancelled
+        if sale_proposal.seller == user.key() && sale_proposal.token == token {
+            sale_proposal.proposal_status = ProposalStatus::Cancelled.to_u8();
+        }
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
+
+    // Proceed to transaction double signer :)
 }
 
 #[derive(Accounts)]
@@ -116,7 +119,7 @@ pub struct UpdateApprovedTokens<'info> {
 
 #[derive(Accounts)]
 pub struct CreateProposal<'info> {
-    #[account(init, payer = user, space = 200)]
+    #[account(init, payer = user, space = 8 + SaleProposal::LEN)]
     pub sale_proposal: Loader<'info, SaleProposal>,
     pub approved_tokens: Account<'info, ApprovedTokens>,
     #[account(mut)]
@@ -133,18 +136,19 @@ pub struct CancelProposal<'info> {
     pub system_program: Program<'info, System>,
 }
 
-#[account]
+#[account()]
+#[derive(Debug)]
 pub struct ApprovedTokens {
     pub authority: Pubkey,
     pub tokens: [Pubkey; 10],
 }
-
 impl ApprovedTokens {
     //Array of 10 Pubkeys & the authority
     pub const LEN: usize = (32 * 10) + 32;
 }
 
 #[account(zero_copy)]
+#[derive(Debug)]
 pub struct SaleProposal {
     pub prices: [PriceStruct; 10],
     pub token: Pubkey,
@@ -157,7 +161,7 @@ impl SaleProposal {
     pub const LEN: usize = (PriceStruct::LEN * 10) + (32 * 2) + 8 + 1;
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug)]
 pub struct PriceStruct {
     pub price: u64,
     pub token: Pubkey,
@@ -193,8 +197,6 @@ impl ProposalStatus {
 }
 
 /* to do
-debug creation proposal
-test cancel proposal
 test proceed to buy
 
 update the code:
