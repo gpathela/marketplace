@@ -48,7 +48,12 @@ pub mod marketplace {
         proposal.seller = ctx.accounts.user.key.clone();
 
         // TO DO for creating PDA
-        proposal.proposal_id = 0;
+        // proposal.proposal_id = 0;
+
+        // Nonce info
+        // proposal.nonce_account = &mut ctx.accounts.nonce_account.();
+
+        // Nonce Account
 
         // Puting the status pending
         proposal.proposal_status = ProposalStatus::Pending.to_u8();
@@ -88,7 +93,7 @@ pub mod marketplace {
 
     pub fn cancel_proposal(ctx: Context<CancelProposal>, token: Pubkey) -> ProgramResult {
         let sale_proposal = &mut ctx.accounts.sale_proposal.load_mut()?;
-        let user =&ctx.accounts.user;
+        let user = &ctx.accounts.user;
 
         // If the seller is the owner of the keypair, change the status to cancelled
         if sale_proposal.seller == user.key() && sale_proposal.token == token {
@@ -99,6 +104,117 @@ pub mod marketplace {
     }
 
     // Proceed to transaction double signer :)
+    /* pub fn create_auction(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        args: CreateAuctionArgs,
+        instant_sale_price: Option<u64>,
+        name: Option<AuctionName>,
+    ) -> ProgramResult {
+        msg!("+ Processing CreateAuction");
+        let accounts = parse_accounts(program_id, accounts)?;
+
+        let auction_path = [
+            PREFIX.as_bytes(),
+            program_id.as_ref(),
+            &args.resource.to_bytes(),
+        ];
+
+
+        // Derive the address we'll store the auction in, and confirm it matches what we expected the
+        // user to provide.
+        let (auction_key, bump) = Pubkey::find_program_address(&auction_path, program_id);
+        if auction_key != *accounts.auction.key {
+            return Err(AuctionError::InvalidAuctionAccount.into());
+        }
+        // The data must be large enough to hold at least the number of winners.
+        let auction_size = match args.winners {
+            WinnerLimit::Capped(n) => {
+                mem::size_of::<Bid>() * BidState::max_array_size_for(n) + BASE_AUCTION_DATA_SIZE
+            }
+            WinnerLimit::Unlimited(_) => BASE_AUCTION_DATA_SIZE,
+        };
+
+        let bid_state = match args.winners {
+            WinnerLimit::Capped(n) => BidState::new_english(n),
+            WinnerLimit::Unlimited(_) => BidState::new_open_edition(),
+        };
+
+        if let Some(gap_tick) = args.gap_tick_size_percentage {
+            if gap_tick > 100 {
+                return Err(AuctionError::InvalidGapTickSizePercentage.into());
+            }
+        }
+
+        // Create auction account with enough space for a winner tracking.
+        create_or_allocate_account_raw(
+            *program_id,
+            accounts.auction,
+            accounts.rent,
+            accounts.system,
+            accounts.payer,
+            auction_size,
+            &[
+                PREFIX.as_bytes(),
+                program_id.as_ref(),
+                &args.resource.to_bytes(),
+                &[bump],
+            ],
+        )?;
+
+        let auction_ext_bump = assert_derivation(
+            program_id,
+            accounts.auction_extended,
+            &[
+                PREFIX.as_bytes(),
+                program_id.as_ref(),
+                &args.resource.to_bytes(),
+                EXTENDED.as_bytes(),
+            ],
+        )?;
+
+        create_or_allocate_account_raw(
+            *program_id,
+            accounts.auction_extended,
+            accounts.rent,
+            accounts.system,
+            accounts.payer,
+            MAX_AUCTION_DATA_EXTENDED_SIZE,
+            &[
+                PREFIX.as_bytes(),
+                program_id.as_ref(),
+                &args.resource.to_bytes(),
+                EXTENDED.as_bytes(),
+                &[auction_ext_bump],
+            ],
+        )?;
+
+        // Configure extended
+        AuctionDataExtended {
+            total_uncancelled_bids: 0,
+            tick_size: args.tick_size,
+            gap_tick_size_percentage: args.gap_tick_size_percentage,
+            instant_sale_price,
+            name,
+        }
+        .serialize(&mut *accounts.auction_extended.data.borrow_mut())?;
+
+        // Configure Auction.
+        AuctionData {
+            authority: args.authority,
+            bid_state: bid_state,
+            end_auction_at: args.end_auction_at,
+            end_auction_gap: args.end_auction_gap,
+            ended_at: None,
+            last_bid: None,
+            price_floor: args.price_floor,
+            state: AuctionState::create(),
+            token_mint: args.token_mint,
+        }
+        .serialize(&mut *accounts.auction.data.borrow_mut())?;
+
+        Ok(())
+    }*/
 }
 
 #[derive(Accounts)]
@@ -121,6 +237,7 @@ pub struct UpdateApprovedTokens<'info> {
 pub struct CreateProposal<'info> {
     #[account(init, payer = user, space = 8 + SaleProposal::LEN)]
     pub sale_proposal: Loader<'info, SaleProposal>,
+    // pub nonce_account: Account<'info, NonceAccount>,
     pub approved_tokens: Account<'info, ApprovedTokens>,
     #[account(mut)]
     pub user: Signer<'info>,
@@ -147,18 +264,27 @@ impl ApprovedTokens {
     pub const LEN: usize = (32 * 10) + 32;
 }
 
+#[account()]
+#[derive(Debug)]
+pub struct NonceAccount {
+    // nonce_pubkey : Pubkey,
+    authorized_pubkey: Pubkey,
+    nonce: String,
+}
+
 #[account(zero_copy)]
 #[derive(Debug)]
 pub struct SaleProposal {
     pub prices: [PriceStruct; 10],
+    // pub nonce_account: Pubkey,
     pub token: Pubkey,
     pub seller: Pubkey,
-    pub proposal_id: u64,
+    // pub proposal_id: u64,
     pub proposal_status: u8,
 }
 
 impl SaleProposal {
-    pub const LEN: usize = (PriceStruct::LEN * 10) + (32 * 2) + 8 + 1;
+    pub const LEN: usize = (PriceStruct::LEN * 10) + (32 * 2) /*+ 8*/ + 1;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug)]
@@ -195,6 +321,31 @@ impl ProposalStatus {
         }
     }
 }
+
+/*
+#[repr(C)]
+#[derive(Clone, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct CreateAuctionArgs {
+    /// How many winners are allowed for this auction. See AuctionData.
+    pub winners: WinnerLimit,
+    /// End time is the cut-off point that the auction is forced to end by. See AuctionData.
+    pub end_auction_at: Option<UnixTimestamp>,
+    /// Gap time is how much time after the previous bid where the auction ends. See AuctionData.
+    pub end_auction_gap: Option<UnixTimestamp>,
+    /// Token mint for the SPL token used for bidding.
+    pub token_mint: Pubkey,
+    /// Authority
+    pub authority: Pubkey,
+    /// The resource being auctioned. See AuctionData.
+    pub resource: Pubkey,
+    /// Set a price floor.
+    pub price_floor: PriceFloor,
+    /// Add a tick size increment
+    pub tick_size: Option<u64>,
+    /// Add a minimum percentage increase each bid must meet.
+    pub gap_tick_size_percentage: Option<u8>,
+}
+*/
 
 /* to do
 test proceed to buy
